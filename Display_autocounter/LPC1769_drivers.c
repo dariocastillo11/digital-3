@@ -28,6 +28,10 @@ void configGPIO(void);
 void delay();
 
 /**
+* @brief Function to increment the value on display and reset if the count reaches the last value of the constant number
+*/
+void changeValue();
+/**
  * @def number
  * @brief defines the BCD values for numbers 0-9 and letters A-F to be displayed on the 7-segment display.
  */
@@ -58,13 +62,11 @@ const uint32_t number[16] = {
 int main(void) {
     configGPIO();
     while (1) {
-    for (int i = 0; i < 16; i++) {
-        GPIO_ClearValue(0, 0xFF);
-        GPIO_SetValue(0, number[i]); // Set pins according to the number
-        delay();
+        changeValue();
     }
-    }
+    return 0; 
 }
+
 void configGPIO(void) {
     PINSEL_CFG_Type pinCfg;       // Initialization of the PINSEL configuration structure.
     pinCfg.portNum = PINSEL_PORT_0;
@@ -88,10 +90,20 @@ void configGPIO(void) {
     PINSEL_ConfigPin(&pinCfg);
     pinCfg.pinNum = PINSEL_PIN_7; // P0.7
     PINSEL_ConfigPin(&pinCfg);
-    GPIO_SetDir(0,0XFF,OUTPUT);
+    // agragar la forma de usar pines multiples como comentarios
+    //PINSEL_ConfigMultiplePins(&pinConfig, 0xFF);
+    GPIO_SetDir(GPIO_PORT_0,0XFF,OUTPUT);
 }
 
 void delay() {
     for(uint32_t i=0; i<DELAY; i++)
         for(uint32_t j=0; j<DELAY; j++);
+}
+
+void changeValue() {
+    static int i=0;
+    LPC_GPIO0->FIOCLR = 0xFF;
+    LPC_GPIO0->FIOSET = number[i];
+    delay();
+    i = (i + 1) % 16;
 }
