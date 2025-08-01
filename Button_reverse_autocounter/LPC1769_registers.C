@@ -1,12 +1,12 @@
 /**
 * @file LPC1769_reg.c
-* @brief Manual BCD counter on the LPC1769 board using GPIO registers and edge-change interrupts.
-* This program configures the 8 GPIO pins to control a 7-segment display, and configures an input on p2.13 with a pull-down resistor to use the interrupt.
-* The main function is to count from 0 to 15 on the display and restart the count.
+* @brief Automatic BCD counter on the LPC1769 board using GPIO registers and level-shifting interrupts.
+* This program configures the 8 GPIO pins to drive a 7-segment display and sets up an input on p2.10 with a pull-down resistor to use the interrupt.
+* The main function is to count up from 0 to 15 and down if the button that generates the interrupt is held down.
 * A common-cathode display with positive logic is used.
 */
 #include "LPC17xx.h"
-
+#include <stdbool.h>
 /**
     * @def DELAY
     * @brief Delay constant for the blocking delay function.
@@ -19,10 +19,9 @@
  * Sets the pin function to GPIO and configures the direction as output
  */
 void configGPIO(void);
-
 /**
-* @brief Configures the GPIO pin interrupt settings p2.13
-*/
+ * @brief Configures the GPIO pin interrupt settings p2.10
+ */
 void configInterrupt(void);
 
 /**
@@ -31,9 +30,10 @@ void configInterrupt(void);
 void delay();
 
 /**
-* @brief Function to increment the value on display and reset if the count reaches the last value of the constant number
+* @brief Function to increment or decrement the displayed value
+* @param change: select ascending or descending order
 */
-void changeValue();
+void changeValue(bool cambio);
 
 /**
  * @def number
@@ -66,7 +66,9 @@ const uint32_t number[16] = {
 int main(void) {
     configGPIO();
     configInterrupt();
-    while (1) {}
+    while (1) {
+        changeValue(1);
+    }
 }
 
 void configGPIO(void) {
@@ -78,25 +80,27 @@ void configGPIO(void) {
 }
 
 void configInterrupt(void) {
-    //  P2.13 as input
+    //  P2.10 como entrada
     LPC_GPIO2->FIODIR &= ~(1 << 10);
-    // Configure pin with pull-down resistors
-    LPC_PINCON->PINMODE4 &= ~(0x3 << 26); // Clean bits 26-27 (P2.13)
-    LPC_PINCON->PINMODE4 |=  (0x2 << 26); // Pull-down
-    // Enable falling edge interrupt on P2.13
-    LPC_GPIOINT->IO2IntEnF |= (1 << 13);
-    // Clean flags
-    LPC_GPIOINT->IO2IntClr = (1 << 13);
-    // Enables interrupt on NVIC, EINT3 for GPIO interrupts
-    NVIC_EnableIRQ(EINT3_IRQn);
+    LPC_PINCON->PINSEL4 &= ~(3 << 20);
+    LPC_PINCON->PINSEL4 |=  (1 << 20);
+    // Configura el pin sin resistencias pull-up/pull-down
+    LPC_PINCON->PINMODE4 &= ~(0x3 << 20); // Limpia
+    LPC_PINCON->PINMODE4 |=  (0x0 << 20); // 00 = pull-up
+    // Configurar interrupción por nivel bajo
+    LPC_SC->EXTMODE &= ~(1 << 0);   // 0 = interrupción por nivel
+    LPC_SC->EXTPOLAR &= ~(1 << 0);  // 0 = nivel bajo
+    // Habilitar interrupción en NVIC
+    NVIC_EnableIRQ(EINT0_IRQn);
 }
 
-void EINT3_IRQHandler(void) {
-	for (volatile int i = 0; i < 50000; i++);
-	if (!(LPC_GPIO2->FIOPIN & (1 << 13))) { // If you keep pressing
-		changeValue();
+void EINT0_IRQHandler(void) {
+	if (!(LPC_GPIO2->FIOPIN & (1 << 13))) { // Si sigue presionado
+		changeValue(0);
 	}
-	LPC_GPIOINT->IO2IntClr = (1 << 13);
+    else{
+        changeValue(1);
+    }
 }
 
 void delay() {
@@ -104,9 +108,18 @@ void delay() {
         for(uint32_t j=0; j<DELAY; j++);
 }
 
-void changeValue() {
-    static int i=0;
-    LPC_GPIO0->FIOCLR = 0xFF;
-    LPC_GPIO0->FIOSET = number[i];
-    i = (i + 1) % 16;
+void changeValue(bool cambio) {
+	static int i=0;
+    if(cambio ==false){
+        LPC_GPIO0->FIOCLR = 0xFF;
+        LPC_GPIO0->FIOSET = number[i];
+        i = (i - 1 + 16) % 16;
+        delay();
+    }
+    else{
+        LPC_GPIO0->FIOCLR = 0xFF;
+        LPC_GPIO0->FIOSET = number[i];
+        i = (i + 1) % 16;
+        delay();
+    }
 }
