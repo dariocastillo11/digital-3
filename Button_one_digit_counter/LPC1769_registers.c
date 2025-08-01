@@ -1,13 +1,11 @@
 /**
 * @file LPC1769_reg.c
-* @brief BCD up-counter on the LPC1769 board using GPIO drivers.
+* @brief BCD up-counter on the LPC1769 board using GPIO registers.
 * This program configures the 8 GPIO pins to drive a 7-segment display.
 * The main function is to count from 0 to 15 on the display and restart the count.
 * A common-cathode display with positive logic is used.
 */
 #include "LPC17xx.h"
-#include "lpc17xx_gpio.h"
-#include "lpc17xx_pinsel.h"
 
 /**
     * @def DELAY
@@ -21,6 +19,10 @@
  * Sets the pin function to GPIO and configures the direction as output
  */
 void configGPIO(void);
+/**
+ * @brief Configures the interrupt settings for the GPIO pins.
+ */
+void configInterrupt(void);
 
 /**
  * @brief Generates a blocking delay using nested loops.
@@ -46,54 +48,57 @@ const uint32_t number[16] = {
     0x07, // Number 7 in BCD
     0x7F, // Number 8 in BCD
     0x6F, // Number 9 in BCD
-	0x77, // letter a in BCD
-	0X7C, // letter b in BCD
-	0X39, // letter c in BCD
-	0X5E, // letter d in BCD
-	0X7b, // letter E in BCD
-	0X71  // letter F in BCD
+    0x77, // letter a in BCD
+    0X7C, // letter b in BCD
+    0X39, // letter c in BCD
+    0X5E, // letter d in BCD
+    0X7b, // letter E in BCD
+    0X71  // letter F in BCD
 };
 
 /**
-* @brief Main function. Initializes GPIO and creates a loop to iterate through the constant  
+* @brief Main function. Initializes GPIO and creates a loop to iterate through the constant
 * of 16 hexadecimal values that are displayed on the pins connected to the 7-segment display.
 * @return int Always returns 0 (never reached).
 */
 int main(void) {
     configGPIO();
+    configInterrupt();
     while (1) {
-        changeValue();
+        //changeValue();
     }
-    return 0; 
 }
 
 void configGPIO(void) {
-    PINSEL_CFG_Type pinCfg;       // Initialization of the PINSEL configuration structure.
-    pinCfg.portNum = PINSEL_PORT_0;
-    pinCfg.funcNum = PINSEL_FUNC_0;
-    pinCfg.pinMode = PINSEL_PINMODE_TRISTATE;
-    pinCfg.openDrain = PINSEL_OD_MODE_NORMAL;
-    // Configure pins P0.0 to P0.7 as GPIO outputs
-    pinCfg.pinNum = PINSEL_PIN_0; // P0.0
-    PINSEL_ConfigPin(&pinCfg);
-    pinCfg.pinNum = PINSEL_PIN_1; // P0.1
-    PINSEL_ConfigPin(&pinCfg);
-    pinCfg.pinNum = PINSEL_PIN_2; // P0.2
-    PINSEL_ConfigPin(&pinCfg);
-    pinCfg.pinNum = PINSEL_PIN_3; // P0.3
-    PINSEL_ConfigPin(&pinCfg);
-    pinCfg.pinNum = PINSEL_PIN_4; // P0.4
-    PINSEL_ConfigPin(&pinCfg);
-    pinCfg.pinNum = PINSEL_PIN_5; // P0.5
-    PINSEL_ConfigPin(&pinCfg);
-    pinCfg.pinNum = PINSEL_PIN_6; // P0.6
-    PINSEL_ConfigPin(&pinCfg);
-    pinCfg.pinNum = PINSEL_PIN_7; // P0.7
-    PINSEL_ConfigPin(&pinCfg);
-    //PINSEL_ConfigMultiplePins(&pinConfig, 0xFF);
-    GPIO_SetDir(GPIO_PORT_0,0XFF,OUTPUT);
+    LPC_PINCON->PINSEL0 &= ~(0xFFFF);  // P0.0 to P0.7 as GPIO
+    LPC_PINCON->PINMODE0 &= ~(0x0000FFFF);  // clear 16 pin of pin mode
+    LPC_PINCON->PINMODE0 |=  (0x0000AAAA);  // desactivate pull-up/pull-down resistors with option -01-
+                                            // 0X AAAA = 1010 1010 1010
+    LPC_GPIO0 ->FIODIR |= 0xFF;       // Set P0.0 a P0.7 as output
 }
 
+void configInterrupt(void) {
+    //  P2.13 como entrada
+    LPC_GPIO2->FIODIR &= ~(1 << 10);
+    // Configura el pin sin resistencias pull-up/pull-down
+    LPC_PINCON->PINMODE4 &= ~(0x3 << 26); // Limpia bits 26-27 (P2.13)
+    LPC_PINCON->PINMODE4 |=  (0x2 << 26); // Pull-down
+    // Habilito interrupción por flanco descendente en P2.13
+    LPC_GPIOINT->IO2IntEnF |= (1 << 13);
+    // Limpio flags
+    LPC_GPIOINT->IO2IntClr = (1 << 13);
+    // Habilita la interrupción en el NVIC, EINT3 para interrupciones GPIO
+    NVIC_EnableIRQ(EINT3_IRQn);
+// logica interrupcion para GPIO2 (EINT3)
+}
+void EINT3_IRQHandler(void) {
+	for (volatile int i = 0; i < 50000; i++);
+	if (!(LPC_GPIO2->FIOPIN & (1 << 13))) { // Si sigue presionado
+		changeValue();
+	}
+	LPC_GPIOINT->IO2IntClr = (1 << 13);
+
+}
 void delay() {
     for(uint32_t i=0; i<DELAY; i++)
         for(uint32_t j=0; j<DELAY; j++);
@@ -103,6 +108,6 @@ void changeValue() {
     static int i=0;
     LPC_GPIO0->FIOCLR = 0xFF;
     LPC_GPIO0->FIOSET = number[i];
-    delay();
+    //delay();
     i = (i + 1) % 16;
 }
