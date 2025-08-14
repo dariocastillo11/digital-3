@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "MULTIPLEXADO.C": "cpp",
+        "LPC1769_registers.C": "cpp"
+    }
+}
