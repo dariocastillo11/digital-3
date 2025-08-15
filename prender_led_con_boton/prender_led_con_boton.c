@@ -1,39 +1,43 @@
 #include "LPC17xx.h"
 
 void configurar_pines();
-void leer_pin_P2_1();
+void leer_pin_P0_11();
 
 int main(void){
     configurar_pines();
     while(1) {
-        leer_pin_P2_1();
+        leer_pin_P0_11();
     }
     return 0;
 }
+
 void configurar_pines(){
-    // P2.1 Y P2.0 COMO MODO GPIO
-    //11  11 --->invierto 00 00 -->and 00 00 force un 0
-    LPC_PINCON->PINSEL4 &= ~(0X33);
-    //ACTIVO PULL DOWN EN P2.1 Y EN P2.0 SIN RESISTENCIA
-    LPC_PINCON->PINMODE4 |= (0x3<<4);
-    //SELECCIONO  P2.0 COMO SALIDA
-    LPC_GPIO4->FIODIR |= (0x1);
-    //SELECCIONO P2.1 COMO ENTRADA
-    LPC_GPIO4->FIODIR &= ~(0x1<<1);
-}
-void leer_pin_P2_1(){
-    //LER P0.1
-    //LPC->FIOPIN =(1<<1);
-    if(LPC_GPIO4->FIOPIN &(1<<1) ){
-        //ACTIVO P2.1 EN ALTO
-        LPC_GPIO4->FIOSET = (0x1);
-    }
-    else{
-        //DESACTIVO P2.1 EN BAJO. 
-        LPC_GPIO4->FIOCLR = ~(0x1);
-    }
+    // P0.10 y P0.11 como GPIO
+    LPC_PINCON->PINSEL0 &= ~(0xF << 20);     // Bits 20-23: P0.10 y P0.11 como GPIO
 
+    // Pull-down en P0.11
+    LPC_PINCON->PINMODE0 &= ~(0x3 << 22);    // Limpia modo
+    LPC_PINCON->PINMODE0 |=  (0x2 << 22);    // Pull-down en P0.11
+
+    // Dirección de pines
+    LPC_GPIO0->FIODIR &= ~(1 << 11);         // P0.11 como entrada
+    LPC_GPIO0->FIODIR |=  (1 << 10);         // P0.10 como salida
+
+    // Inicializa LED apagado
+    LPC_GPIO0->FIOCLR = (1 << 10);
 }
 
+void leer_pin_P0_11(){
+    if(LPC_GPIO0->FIOPIN & (1 << 11)) {
+        LPC_GPIO0->FIOSET = (1 << 10);       // Enciende LED
+        for(volatile int i = 0; i < 3000000; i++);
+        LPC_GPIO0->FIOCLR = (1 << 10);       // Apaga LED
+        for(volatile int i = 0; i < 3000000; i++);
+    } else {
+        LPC_GPIO0->FIOSET = (1 << 10);       // Enciende LED
+        for(volatile int i = 0; i < 1000000; i++);
+        LPC_GPIO0->FIOCLR = (1 << 10);       // Apaga LED
+        for(volatile int i = 0; i < 1000000; i++);
 
-
+    }
+}

@@ -57,7 +57,7 @@ const uint32_t number[10] = {
 * @return int Always returns 0 (never reached).
 */
 int main(void) {
-363232.    configGPIO();
+    configGPIO();
     int value = 0;
     while (1) {
     	actualizarDigitos(valor_actual);
