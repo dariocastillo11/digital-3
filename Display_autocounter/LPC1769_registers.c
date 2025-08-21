@@ -12,6 +12,7 @@
     * @brief Delay constant for the blocking delay function.
  */
 #define DELAY 2500
+#define SEGMENTOS 0xFFFF
 
 /**
  * @brief Configures the GPIO pins for the display as outputs.
@@ -65,9 +66,9 @@ int main(void) {
 }
 
 void configGPIO(void) {
-    LPC_PINCON->PINSEL0 &= ~(0xFFFF);  // P0.0 to P0.7 as GPIO        
-    LPC_PINCON->PINMODE0 &= ~(0x0000FFFF);  // clear 16 pin of pin mode
-    LPC_PINCON->PINMODE0 |=  (0x0000AAAA);  // desactivate pull-up/pull-down resistors with option -01-
+    LPC_PINCON->PINSEL0 &= ~(SEGMENTOS);  // P0.0 to P0.7 as GPIO        
+    LPC_PINCON->PINMODE0 &= ~(SEGMENTOS);  // clear 16 pin of pin mode
+    LPC_PINCON->PINMODE0 |=  (0xAAAA);  // desactivate pull-up/pull-down resistors with option -01-
                                             // 0X AAAA = 1010 1010 1010 
     LPC_GPIO0 ->FIODIR |= 0xFF;       // Set P0.0 a P0.7 as output
 }
