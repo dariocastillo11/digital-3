@@ -1,23 +1,24 @@
 #include "lpc17xx.h"
-#define STCTRL      (*( ( volatile unsigned long *) 0xE000E010 )) // System Timer Control and status register
-#define STRELOAD    (*( ( volatile unsigned long *) 0xE000E014 )) // System Timer Reload value register
-#define STCURR      (*( ( volatile unsigned long *) 0xE000E018 )) // System Timer Current value register
-#define SBIT_ENABLE 0 //System Tick counter enable. When 1, the counter is enabled. When 0,
+//#define STCTRL      (*( ( volatile unsigned long *) 0xE000E010 )) // System Timer Control and status register
+//#define STRELOAD    (*( ( volatile unsigned long *) 0xE000E014 )) // System Timer Reload value register
+//#define STCURR      (*( ( volatile unsigned long *) 0xE000E018 )) // System Timer Current value register
+//#define SBIT_ENABLE 0 //System Tick counter enable. When 1, the counter is enabled. When 0,
 					  //the counter is disabled.
-#define SBIT_TICKINT 1 //System Tick interrupt enable. When 1, the System Tick interrupt is
+//#define SBIT_TICKINT 1 //System Tick interrupt enable. When 1, the System Tick interrupt is
 					   //enabled. When 0, the System Tick interrupt is disabled. When enabled,
 					   //the interrupt is generated when the System Tick counter counts down to 0.
-#define SBIT_CLKSOURCE 2 //System Tick clock source selection. When 1, the CPU clock is selected.
+//#define SBIT_CLKSOURCE 2 //System Tick clock source selection. When 1, the CPU clock is selected.
 				         //When 0, the external clock pin (STCLK) is selected
-#define RELOAD_VALUE 999999;//167ms
+//#define RELOAD_VALUE 99999;//1ms
 /*!
  * 100MHz * 100ms = 10.000.000 - 1
  */
 #define OUT_LED 22 //P0.22
 #define entrada 11
 void configurar_pines(void);
-int leer_pon_P0_11(void);
-int delay1=50;
+int leer_pin_P0_11(void);
+int contador_periodo=20;
+int contador_ciclo_trabajo=1;
 int main(void) {
     //system init: inicializa el sistema
     //su funcion es configurar el oscilador y la pll
@@ -29,10 +30,12 @@ int main(void) {
     //y configurar el flash, entre otras cosas como inicializar
     //los perifericos que se vayan a usar  , y configurar
     //los pines para que funcionen como se desea
-	SystemInit();
-	configurar_pines()
-	STRELOAD = RELOAD_VALUE;
-	STCTRL = (1<<SBIT_ENABLE) | (1<<SBIT_TICKINT) | (1<<SBIT_CLKSOURCE);
+	//SystemInit();
+	configurar_pines();
+	//STRELOAD = RELOAD_VALUE;
+	//STCTRL = (1<<SBIT_ENABLE) | (1<<SBIT_TICKINT) | (1<<SBIT_CLKSOURCE);
+    //ver de como usar systickconfig
+    SysTick_Config(100000); // Configura SysTick para 1ms
 	LPC_GPIO0->FIODIR  |= (1<<OUT_LED);
 	while(1) {
 	}
@@ -40,16 +43,20 @@ int main(void) {
 }
 
 void SysTick_Handler(void){
-    //un xor en el pin del led . lo que hace es cambiar su estado como si fuera un toggle
-    //un toggle es una operacion logica que cambia el estado de un bit
-    //si el bit es 0 lo cambia a 1
-    //si el bit es 1 lo cambia a 0
+    // debe entrar cada 1ms . periodo 20ms
+    //prender led 1 ms apagarlo durante el resto del periodo
 	
-	delay1 -=leer_pin_P0_11();
-	if(!delay1){
-		LPC_GPIO0->FIOPIN ^= (1<<OUT_LED);
-		delay1=50;
-	}
+    if(contador_periodo<=contador_ciclo_trabajo){
+        LPC_GPIO0->FIOSET |= (1<<OUT_LED);
+    }
+    else if (contador_periodo==0){
+        contador_periodo=20;
+    }
+    else{
+        LPC_GPIO0->FIOCLR |= (1<<OUT_LED);  
+    }
+	contador_periodo -=1;
+    (void) SysTick->CTRL; // Leer el registro de control para limpiar el flag de interrupción
 // LIMPIAR FLAGS
 }
 //p011 como entrada

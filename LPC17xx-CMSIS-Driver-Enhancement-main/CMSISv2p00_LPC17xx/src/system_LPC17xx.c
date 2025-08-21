@@ -385,8 +385,15 @@
 #define RTC_CLK     (   32000UL)        /* RTC oscillator frequency           */
 #define IRC_OSC     ( 4000000UL)        /* Internal RC oscillator frequency   */
 
-
-/* F_cco0 = (2 * M * F_in) / N  */
+//#define PLL0CFG_Val           0x00050063
+/* F_cco0 = (2 * M * F_in) / N  
+n=6
+m=100
+f_cco0 = (2 * 100 * 12MHz) / 6 = 400MHz
+esto es a frecuencia de la PLL
+f_cclk = f_cco0 / 4 = 100MHz
+esto es la frecienca del micro
+*/
 #define __M               (((PLL0CFG_Val      ) & 0x7FFF) + 1)
 #define __N               (((PLL0CFG_Val >> 16) & 0x00FF) + 1)
 #define __FCCO(__F_IN)    ((2ULL * __M * __F_IN) / __N) 
