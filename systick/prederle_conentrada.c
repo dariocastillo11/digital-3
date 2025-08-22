@@ -9,7 +9,7 @@
 					   //the interrupt is generated when the System Tick counter counts down to 0.
 #define SBIT_CLKSOURCE 2 //System Tick clock source selection. When 1, the CPU clock is selected.
 				         //When 0, the external clock pin (STCLK) is selected
-#define RELOAD_VALUE 999999;//167ms
+#define RELOAD_VALUE 999999  ;//167ms
 /*!
  * 100MHz * 100ms = 10.000.000 - 1
  */
@@ -49,7 +49,7 @@ void SysTick_Handler(void){
 		LPC_GPIO0->FIOPIN ^= (1<<OUT_LED);
 		delay1=50;
 	}
-	
+
 // LIMPIAR FLAGS
 }
 //p011 como entrada

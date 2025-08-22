@@ -16,8 +16,8 @@
 #define OUT_LED 22 //P0.22
 #define entrada 11
 void configurar_pines(void);
-int leer_pon_P0_11(void);
-int delay1=50;
+int leer_pin_P0_11(void);
+int delay1=100;
 int main(void) {
     //system init: inicializa el sistema
     //su funcion es configurar el oscilador y la pll
@@ -30,7 +30,7 @@ int main(void) {
     //los perifericos que se vayan a usar  , y configurar
     //los pines para que funcionen como se desea
 	SystemInit();
-	configurar_pines()
+	configurar_pines();
 	STRELOAD = RELOAD_VALUE;
 	STCTRL = (1<<SBIT_ENABLE) | (1<<SBIT_TICKINT) | (1<<SBIT_CLKSOURCE);
 	LPC_GPIO0->FIODIR  |= (1<<OUT_LED);
@@ -44,7 +44,7 @@ void SysTick_Handler(void){
     //un toggle es una operacion logica que cambia el estado de un bit
     //si el bit es 0 lo cambia a 1
     //si el bit es 1 lo cambia a 0
-	
+
 	delay1 -=leer_pin_P0_11();
 	if(!delay1){
 		LPC_GPIO0->FIOPIN ^= (1<<OUT_LED);
